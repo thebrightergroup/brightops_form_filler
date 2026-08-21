@@ -1,0 +1,6 @@
+{
+  "name": "Form Filler",
+  "description": "Turn PDF forms or scanned images into interactive, fillable documents with native and AI-powered field detection.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
