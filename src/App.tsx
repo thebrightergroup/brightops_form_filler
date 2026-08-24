@@ -24,6 +24,18 @@ import { AnalysisSummaryModal } from './components/AnalysisSummaryModal';
 import { DocumentLoadErrorModal } from './components/DocumentLoadErrorModal';
 import { DuplicateDocumentModal } from './components/DuplicateDocumentModal';
 import { StorageDiagnosticsModal } from './components/StorageDiagnosticsModal';
+import { ResetDocumentModal, ResetActionType } from './components/ResetDocumentModal';
+import { ExportStatusModal } from './components/ExportStatusModal';
+import { PrefillModal } from './components/PrefillModal';
+import { PrefillBanner } from './components/PrefillBanner';
+import { useAuth } from './auth/AuthContext';
+import { LoginScreen } from './auth/LoginScreen';
+import {
+  UserProfileData,
+  getStoredUserProfile,
+  applyPrefillToFields,
+  matchDocumentFieldsForPrefill,
+} from './auth/prefillProfile';
 
 import { convertImageToPdf } from './lib/imageConverter';
 import {
@@ -33,7 +45,8 @@ import {
   toMachineName,
 } from './lib/pdfAnalyzer';
 import { createSamplePdf } from './lib/samplePdfs';
-import { generateCompletedPdf } from './lib/pdfGenerator';
+import { generateCompletedPdf, exportPdfDocument } from './lib/pdfGenerator';
+import { PdfExportResult } from './types';
 import {
   saveDocumentWithBinary,
   loadDocumentForEditing,
@@ -48,6 +61,8 @@ import {
 } from './lib/pdfStorage';
 
 export default function App() {
+  const { user, loading } = useAuth();
+
   const [appMode, setAppMode] = useState<AppMode>('start');
   const [viewMode, setViewMode] = useState<ViewMode>('design');
 
@@ -61,8 +76,20 @@ export default function App() {
   const [showSignatureModal, setShowSignatureModal] = useState<boolean>(false);
   const [signatureTarget, setSignatureTarget] = useState<DetectedField | null>(null);
 
+  const [showPrefillModal, setShowPrefillModal] = useState<boolean>(false);
+  const [userProfile, setUserProfile] = useState<UserProfileData>(() => getStoredUserProfile(user));
+
+  useEffect(() => {
+    if (user) {
+      setUserProfile(getStoredUserProfile(user));
+    }
+  }, [user]);
+
   const [showPreviewModal, setShowPreviewModal] = useState<boolean>(false);
   const [previewPdfBlobUrl, setPreviewPdfBlobUrl] = useState<string>('');
+
+  const [showResetModal, setShowResetModal] = useState<boolean>(false);
+  const [resetModalAction, setResetModalAction] = useState<ResetActionType>('clear_values');
 
   const [showAiModal, setShowAiModal] = useState<boolean>(false);
   const [aiMissingFields, setAiMissingFields] = useState<string[]>([]);
@@ -75,6 +102,8 @@ export default function App() {
   const [isExporting, setIsExporting] = useState<boolean>(false);
   const [exportError, setExportError] = useState<string | null>(null);
   const [saveToast, setSaveToast] = useState<string | null>(null);
+  const [showExportStatusModal, setShowExportStatusModal] = useState<boolean>(false);
+  const [lastExportResult, setLastExportResult] = useState<PdfExportResult | null>(null);
 
   // Storage & Diagnostics Modals State
   const [loadErrorDoc, setLoadErrorDoc] = useState<{
@@ -112,6 +141,80 @@ export default function App() {
   const refreshRecentDocs = async () => {
     const list = await getAllRecentDocuments();
     setRecentDocuments(list);
+  };
+
+  // Prefill Handler
+  const handleApplyPrefill = (profileToUse?: UserProfileData, overwrite: boolean = false) => {
+    if (!currentDoc) return;
+    const targetProfile = profileToUse || userProfile;
+    const result = applyPrefillToFields(currentDoc.fields, targetProfile, overwrite);
+    const updatedDoc: DocumentRecord = {
+      ...currentDoc,
+      fields: result.updatedFields,
+      updatedAt: new Date().toISOString(),
+    };
+    setCurrentDoc(updatedDoc);
+    updateDocumentRecordOnly(updatedDoc);
+    if (result.filledCount > 0) {
+      setSaveToast(`Prefilled ${result.filledCount} field${result.filledCount === 1 ? '' : 's'} with your BrightOps profile details`);
+      setTimeout(() => setSaveToast(null), 3500);
+    } else {
+      setSaveToast('All matching fields already contain values');
+      setTimeout(() => setSaveToast(null), 2500);
+    }
+  };
+
+  // Reset & Delete Form Handlers
+  const handleOpenResetModal = (action: ResetActionType = 'clear_values') => {
+    setResetModalAction(action);
+    setShowResetModal(true);
+  };
+
+  const handleClearFormValues = async () => {
+    if (!currentDoc) return;
+    const clearedFields = currentDoc.fields.map((f) => ({
+      ...f,
+      value: f.fieldType === 'checkbox' ? false : '',
+    }));
+    const updatedDoc: DocumentRecord = {
+      ...currentDoc,
+      fields: clearedFields,
+      status: 'In Progress',
+      updatedAt: new Date().toISOString(),
+    };
+    setCurrentDoc(updatedDoc);
+    await updateDocumentRecordOnly(updatedDoc);
+    await refreshRecentDocs();
+    setSaveToast('All entered form values have been cleared');
+    setTimeout(() => setSaveToast(null), 3000);
+  };
+
+  const handleClearAllFields = async () => {
+    if (!currentDoc) return;
+    const updatedDoc: DocumentRecord = {
+      ...currentDoc,
+      fields: [],
+      status: 'In Progress',
+      updatedAt: new Date().toISOString(),
+    };
+    setCurrentDoc(updatedDoc);
+    setSelectedField(null);
+    await updateDocumentRecordOnly(updatedDoc);
+    await refreshRecentDocs();
+    setSaveToast('All field overlays have been removed');
+    setTimeout(() => setSaveToast(null), 3000);
+  };
+
+  const handleDeleteCurrentDocument = async () => {
+    if (!currentDoc) return;
+    const docId = currentDoc.id;
+    await deleteDocumentRecord(docId);
+    setCurrentDoc(null);
+    setSelectedField(null);
+    setAppMode('start');
+    await refreshRecentDocs();
+    setSaveToast('Form and document deleted from your library');
+    setTimeout(() => setSaveToast(null), 3000);
   };
 
   // Helper: Convert File/Blob to ArrayBuffer
@@ -630,13 +733,13 @@ export default function App() {
         return;
       }
 
-      const bytes = await generateCompletedPdf({
+      const exportRes = await exportPdfDocument({
         pdfArrayBuffer: arrayBuffer,
         fields: currentDoc.fields,
         flatten: false,
       });
 
-      const blob = new Blob([bytes], { type: 'application/pdf' });
+      const blob = new Blob([exportRes.pdfBytes], { type: 'application/pdf' });
       setPreviewPdfBlobUrl(URL.createObjectURL(blob));
       setShowPreviewModal(true);
     } catch (err) {
@@ -681,27 +784,41 @@ export default function App() {
         arrayBuffer = await fileToArrayBuffer(blob);
       }
       if (!arrayBuffer) {
-        setExportError('Unable to prepare the fillable PDF right now. Please try again.');
+        setExportError('Unable to retrieve the source PDF file. Please try again.');
+        setShowExportStatusModal(true);
         return;
       }
 
-      const bytes = await generateCompletedPdf({
+      const result = await exportPdfDocument({
         pdfArrayBuffer: arrayBuffer,
         fields: currentDoc.fields,
         flatten: false,
       });
 
-      const downloadBlob = new Blob([bytes], { type: 'application/pdf' });
+      setLastExportResult(result);
+
+      // If all attempted fields failed and none were written, trigger controlled fallback
+      if (result.fieldsAttempted > 0 && result.fieldsSuccessfullyWritten === 0 && result.fieldsFailed > 0) {
+        setShowExportStatusModal(true);
+        return;
+      }
+
+      const downloadBlob = new Blob([result.pdfBytes], { type: 'application/pdf' });
       const link = document.createElement('a');
       link.href = URL.createObjectURL(downloadBlob);
       link.download = `${currentDoc.title}_fillable.pdf`;
       link.click();
 
-      setSaveToast('Fillable PDF downloaded safely.');
+      if (result.fieldsFailed > 0) {
+        setSaveToast(`Fillable PDF downloaded (${result.fieldsSuccessfullyWritten} fields written, ${result.fieldsFailed} unsupported).`);
+      } else {
+        setSaveToast('Fillable PDF downloaded safely.');
+      }
       setTimeout(() => setSaveToast(null), 3500);
-    } catch (err) {
+    } catch (err: any) {
       console.error('Error downloading fillable PDF:', err);
-      setExportError('Unable to prepare the fillable PDF right now. Please try again.');
+      setExportError(err?.message || 'Unable to prepare the fillable PDF right now. Please try again.');
+      setShowExportStatusModal(true);
     } finally {
       setIsExporting(false);
     }
@@ -722,17 +839,20 @@ export default function App() {
         arrayBuffer = await fileToArrayBuffer(blob);
       }
       if (!arrayBuffer) {
-        setExportError('Unable to complete and export the form right now. Your progress has not been lost.');
+        setExportError('Unable to retrieve the source PDF file. Your progress has not been lost.');
+        setShowExportStatusModal(true);
         return;
       }
 
-      const bytes = await generateCompletedPdf({
+      const result = await exportPdfDocument({
         pdfArrayBuffer: arrayBuffer,
         fields: currentDoc.fields,
         flatten: true,
       });
 
-      const downloadBlob = new Blob([bytes], { type: 'application/pdf' });
+      setLastExportResult(result);
+
+      const downloadBlob = new Blob([result.pdfBytes], { type: 'application/pdf' });
       const link = document.createElement('a');
       link.href = URL.createObjectURL(downloadBlob);
       link.download = `${currentDoc.title}_completed.pdf`;
@@ -749,9 +869,10 @@ export default function App() {
 
       setSaveToast('Form completed and exported successfully.');
       setTimeout(() => setSaveToast(null), 3500);
-    } catch (err) {
+    } catch (err: any) {
       console.error('Error completing and exporting PDF:', err);
-      setExportError('Unable to complete and export the form right now. Your progress has not been lost.');
+      setExportError(err?.message || 'Unable to complete and export the form right now. Your progress has not been lost.');
+      setShowExportStatusModal(true);
     } finally {
       setIsExporting(false);
     }
@@ -814,6 +935,25 @@ export default function App() {
     ? currentDoc.fields.filter((f) => f.source === 'ai_detected' && !f.accepted).length
     : 0;
 
+  const prefillMatches = currentDoc
+    ? matchDocumentFieldsForPrefill(currentDoc.fields, userProfile)
+    : { matches: [], emptyMatchesCount: 0, totalMatchesCount: 0 };
+
+  if (loading) {
+    return (
+      <div className="h-screen w-screen flex flex-col items-center justify-center bg-[#070D18] text-slate-200">
+        <div className="w-10 h-10 border-3 border-[#006CA3] border-t-transparent rounded-full animate-spin mb-4" />
+        <p className="text-sm text-slate-400 font-medium animate-pulse">
+          Verifying BrightOps authentication session...
+        </p>
+      </div>
+    );
+  }
+
+  if (!user || !user.isAuthorized) {
+    return <LoginScreen />;
+  }
+
   return (
     <div className="flex flex-col h-screen w-screen overflow-hidden bg-slate-100 text-slate-900 font-sans antialiased">
       {appMode === 'start' || !currentDoc ? (
@@ -823,6 +963,7 @@ export default function App() {
           recentDocuments={recentDocuments}
           onOpenRecent={handleOpenRecentDoc}
           onDeleteRecent={handleDeleteRecentDoc}
+          onOpenPrefillSettings={() => setShowPrefillModal(true)}
         />
       ) : (
         <div className="flex-1 flex flex-col h-full overflow-hidden min-h-0">
@@ -841,10 +982,23 @@ export default function App() {
             onSaveTemplate={handleSaveAsTemplate}
             onPreview={handlePreviewPdf}
             onComplete={handlePreviewPdf}
+            onOpenPrefillSettings={() => setShowPrefillModal(true)}
+            onClearChanges={() => handleOpenResetModal(viewMode === 'fill' ? 'clear_values' : 'clear_fields')}
+            onDeleteForm={() => handleOpenResetModal('delete_form')}
             isAnalyzing={isAnalyzing}
             unacceptedAiCount={unacceptedAiCount}
             totalFieldsCount={currentDoc.fields.length}
           />
+
+          {/* Quick Auto-Prefill Banner */}
+          {viewMode === 'fill' && currentDoc && (
+            <PrefillBanner
+              fields={currentDoc.fields}
+              profile={userProfile}
+              onApplyPrefill={(prof, overwrite) => handleApplyPrefill(prof, overwrite)}
+              onOpenSettings={() => setShowPrefillModal(true)}
+            />
+          )}
 
           {/* AI Field Review Drawer */}
           {showReviewDrawer && (
@@ -888,6 +1042,11 @@ export default function App() {
               onCheckForm={handleCheckForm}
               onSuggestNames={handleAutoSuggestNames}
               onShowStorageDiagnostics={handleShowDiagnostics}
+              onOpenPrefillModal={() => setShowPrefillModal(true)}
+              onQuickPrefill={() => handleApplyPrefill(userProfile, false)}
+              onClearChanges={() => handleOpenResetModal(viewMode === 'fill' ? 'clear_values' : 'clear_fields')}
+              onDeleteDocument={() => handleOpenResetModal('delete_form')}
+              prefillMatchesCount={prefillMatches.emptyMatchesCount}
               isAnalyzing={isAnalyzing}
               onDownloadFillablePdf={handleDownloadFillablePdf}
               onSaveProgress={handleSaveProgress}
@@ -990,6 +1149,18 @@ export default function App() {
       )}
 
       {/* Modals */}
+      {showPrefillModal && (
+        <PrefillModal
+          fields={currentDoc?.fields || []}
+          isOpen={showPrefillModal}
+          onClose={() => setShowPrefillModal(false)}
+          onApplyPrefill={(updatedProfile, overwrite) => {
+            setUserProfile(updatedProfile);
+            handleApplyPrefill(updatedProfile, overwrite);
+          }}
+        />
+      )}
+
       {showSignatureModal && (
         <SignatureModal
           fieldLabel={signatureTarget?.label || 'Signature'}
@@ -1016,6 +1187,52 @@ export default function App() {
           onAddMissingField={(fieldName) => handleAddField('text', 1, 30, 30)}
           onClose={() => setShowAiModal(false)}
         />
+      )}
+
+      {/* Clear Changes & Delete Document Confirmation Modal */}
+      {showResetModal && currentDoc && (
+        <ResetDocumentModal
+          isOpen={showResetModal}
+          documentTitle={currentDoc.title}
+          fieldsCount={currentDoc.fields.length}
+          filledValuesCount={
+            currentDoc.fields.filter(
+              (f) => f.value !== undefined && f.value !== '' && f.value !== false
+            ).length
+          }
+          initialAction={resetModalAction}
+          onClose={() => setShowResetModal(false)}
+          onClearValues={handleClearFormValues}
+          onClearAllFields={handleClearAllFields}
+          onDeleteDocument={handleDeleteCurrentDocument}
+        />
+      )}
+
+      {/* Export Status & Fallback Modal */}
+      {showExportStatusModal && (
+        <ExportStatusModal
+          isOpen={showExportStatusModal}
+          documentTitle={currentDoc?.title || 'Current Document'}
+          exportResult={lastExportResult}
+          errorMessage={exportError}
+          onClose={() => setShowExportStatusModal(false)}
+          onRetryFillable={() => {
+            setShowExportStatusModal(false);
+            handleDownloadFillablePdf();
+          }}
+          onExportFlattened={() => {
+            setShowExportStatusModal(false);
+            handleCompleteAndExport();
+          }}
+        />
+      )}
+
+      {/* Global Toast Notification */}
+      {saveToast && (
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 bg-slate-900/95 text-white border border-slate-700 shadow-2xl px-4 py-2.5 rounded-xl text-xs font-medium flex items-center gap-2 animate-in fade-in slide-in-from-bottom-2 duration-150">
+          <span className="w-2 h-2 rounded-full bg-sky-400 animate-pulse" />
+          <span>{saveToast}</span>
+        </div>
       )}
     </div>
   );

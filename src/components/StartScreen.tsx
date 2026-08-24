@@ -2,6 +2,7 @@ import React, { useRef } from 'react';
 import { BrandLogo } from '../brand/BrandLogo';
 import { DocumentRecord, TemplateRecord } from '../types';
 import { SAMPLE_TEMPLATES } from '../lib/samplePdfs';
+import { UserMenu } from '../auth/UserMenu';
 import { Upload, FileText, ArrowRight, ShieldCheck, Sparkles, Clock, FileCheck, Layers, Image as ImageIcon, Scan } from 'lucide-react';
 
 interface StartScreenProps {
@@ -10,6 +11,7 @@ interface StartScreenProps {
   recentDocuments: DocumentRecord[];
   onOpenRecent: (doc: DocumentRecord) => void;
   onDeleteRecent?: (docId: string) => void;
+  onOpenPrefillSettings?: () => void;
 }
 
 export const StartScreen: React.FC<StartScreenProps> = ({
@@ -18,6 +20,7 @@ export const StartScreen: React.FC<StartScreenProps> = ({
   recentDocuments,
   onOpenRecent,
   onDeleteRecent,
+  onOpenPrefillSettings,
 }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -69,13 +72,16 @@ export const StartScreen: React.FC<StartScreenProps> = ({
           {/* Center: Standalone App Title */}
           <div className="absolute left-1/2 -translate-x-1/2 text-center">
             <h1 className="font-heading font-extrabold text-xl sm:text-2xl text-[#0B1220] tracking-tight">
-              Form Filler
+              BrightOps Form Studio
             </h1>
           </div>
 
-          {/* Right: Balance spacer / sub-label */}
-          <div className="hidden md:block text-xs text-slate-400 font-medium">
-            Brighter Workspace Technologies
+          {/* Right: Balance spacer / User Menu */}
+          <div className="flex items-center gap-3">
+            <div className="hidden lg:block text-xs text-slate-400 font-medium">
+              Brighter Workspace Technologies
+            </div>
+            <UserMenu onOpenPrefillSettings={onOpenPrefillSettings} />
           </div>
         </div>
       </header>
@@ -86,13 +92,13 @@ export const StartScreen: React.FC<StartScreenProps> = ({
         <div className="text-center max-w-2xl mx-auto space-y-2">
           <div className="inline-flex items-center gap-1.5 px-3 py-0.5 rounded-full bg-sky-100 text-[#006CA3] text-xs font-semibold">
             <Sparkles className="w-3.5 h-3.5" />
-            <span>Native PDF + Image OCR Field Converter</span>
+            <span>Intelligent Field Detection & Document Preparation</span>
           </div>
           <h1 className="font-heading font-extrabold text-2xl sm:text-3xl text-[#0B1220] tracking-tight">
-            Turn PDF forms or scanned images into fillable documents.
+            Turn existing documents into intelligent, reusable forms.
           </h1>
           <p className="text-slate-600 text-xs sm:text-sm leading-relaxed">
-            Intelligently inspect PDF form fields or convert image documents (PNG, JPG, WEBP) into structured, fillable, and signable PDF forms using Gemini AI OCR.
+            Detect existing fields, add new ones, fill and edit documents, and export reusable fillable PDFs. Form Studio can also connect documents to BrightOps records, data and workflows.
           </p>
         </div>
 

@@ -1,6 +1,6 @@
 {
-  "name": "Form Filler",
-  "description": "Turn PDF forms or scanned images into interactive, fillable documents with native and AI-powered field detection.",
+  "name": "BrightOps Form Studio",
+  "description": "Turn existing documents into intelligent, reusable forms. Detect fields, edit, fill, and export fillable or flattened PDFs.",
   "requestFramePermissions": [],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }

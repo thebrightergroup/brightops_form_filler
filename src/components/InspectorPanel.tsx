@@ -25,6 +25,10 @@ import {
   FileCheck,
   HelpCircle,
   Clock,
+  Zap,
+  UserCheck,
+  RotateCcw,
+  Eraser,
 } from 'lucide-react';
 
 interface InspectorPanelProps {
@@ -39,6 +43,11 @@ interface InspectorPanelProps {
   onCheckForm: () => void;
   onSuggestNames: () => void;
   onShowStorageDiagnostics?: () => void;
+  onOpenPrefillModal?: () => void;
+  onQuickPrefill?: () => void;
+  onClearChanges?: () => void;
+  onDeleteDocument?: () => void;
+  prefillMatchesCount?: number;
   isAnalyzing: boolean;
   onDownloadFillablePdf: () => void;
   onSaveProgress: () => void;
@@ -62,6 +71,11 @@ export const InspectorPanel: React.FC<InspectorPanelProps> = ({
   onCheckForm,
   onSuggestNames,
   onShowStorageDiagnostics,
+  onOpenPrefillModal,
+  onQuickPrefill,
+  onClearChanges,
+  onDeleteDocument,
+  prefillMatchesCount = 0,
   isAnalyzing,
   onDownloadFillablePdf,
   onSaveProgress,
@@ -73,6 +87,7 @@ export const InspectorPanel: React.FC<InspectorPanelProps> = ({
   saveToast,
 }) => {
   const [activeTab, setActiveTab] = useState<'field' | 'document'>('document');
+
   const [showAdvanced, setShowAdvanced] = useState<boolean>(false);
   const [selectedWorkflowChoice, setSelectedWorkflowChoice] = useState<
     'fill' | 'download' | 'decide_later' | null
@@ -364,6 +379,42 @@ export const InspectorPanel: React.FC<InspectorPanelProps> = ({
                     Fill out the fields directly on the document pages. You can save your progress at any time or complete and export when finished.
                   </p>
 
+                  {/* Auto-Prefill Helper Card */}
+                  {onOpenPrefillModal && (
+                    <div className="p-2.5 rounded-xl bg-gradient-to-r from-sky-50 to-blue-50/50 border border-sky-200/80 space-y-2">
+                      <div className="flex items-center justify-between text-xs">
+                        <span className="font-bold text-slate-800 flex items-center gap-1.5 text-[11px]">
+                          <Zap className="w-3.5 h-3.5 text-[#006CA3] fill-sky-500/20" />
+                          <span>Smart Auto-Prefill</span>
+                        </span>
+                        {prefillMatchesCount > 0 && (
+                          <span className="text-[10px] bg-[#006CA3] text-white px-1.5 py-0.2 rounded font-mono font-bold">
+                            {prefillMatchesCount} match{prefillMatchesCount === 1 ? '' : 'es'}
+                          </span>
+                        )}
+                      </div>
+
+                      <div className="flex items-center gap-2">
+                        {onQuickPrefill && (
+                          <button
+                            onClick={onQuickPrefill}
+                            className="flex-1 py-1.5 px-2 rounded-lg bg-[#006CA3] hover:bg-[#005a88] text-white text-[11px] font-bold transition-all shadow-2xs flex items-center justify-center gap-1 cursor-pointer"
+                          >
+                            <Zap className="w-3 h-3 text-sky-200" />
+                            <span>Prefill Fields</span>
+                          </button>
+                        )}
+                        <button
+                          onClick={onOpenPrefillModal}
+                          className="py-1.5 px-2.5 rounded-lg border border-slate-300 bg-white hover:bg-slate-50 text-slate-700 text-[11px] font-semibold transition-colors cursor-pointer"
+                          title="Manage Stored Profile Data"
+                        >
+                          Profile
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
                   <div className="grid grid-cols-2 gap-2 pt-1">
                     <button
                       onClick={onSaveProgress}
@@ -386,6 +437,16 @@ export const InspectorPanel: React.FC<InspectorPanelProps> = ({
                       <span>Complete and export</span>
                     </button>
                   </div>
+
+                  {onClearChanges && (
+                    <button
+                      onClick={onClearChanges}
+                      className="w-full py-1.5 px-3 rounded-lg border border-slate-200 bg-slate-50 hover:bg-slate-100 text-slate-600 hover:text-slate-800 text-[11px] font-semibold transition-colors flex items-center justify-center gap-1.5 cursor-pointer"
+                    >
+                      <RotateCcw className="w-3 h-3 text-slate-400" />
+                      <span>Clear all entered form data</span>
+                    </button>
+                  )}
                 </div>
               ) : (
                 <div className="bg-white rounded-xl p-3 border border-slate-200 text-xs text-slate-600 space-y-2 shadow-2xs">
@@ -472,6 +533,37 @@ export const InspectorPanel: React.FC<InspectorPanelProps> = ({
                 )}
               </div>
             )}
+          </div>
+
+          {/* Reset & Deletion Controls Card */}
+          <div className="border border-slate-200 rounded-2xl p-3.5 bg-slate-50/70 space-y-2.5 shadow-2xs">
+            <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-500 font-mono block">
+              Reset & Form Management
+            </span>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+              {onClearChanges && (
+                <button
+                  type="button"
+                  onClick={onClearChanges}
+                  className="w-full py-2 px-2.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-100 text-slate-700 text-xs font-semibold transition-colors flex items-center justify-center gap-1.5 shadow-2xs cursor-pointer"
+                >
+                  <RotateCcw className="w-3.5 h-3.5 text-slate-400" />
+                  <span>Clear Changes</span>
+                </button>
+              )}
+
+              {onDeleteDocument && (
+                <button
+                  type="button"
+                  onClick={onDeleteDocument}
+                  className="w-full py-2 px-2.5 rounded-xl border border-rose-200 bg-rose-50 hover:bg-rose-100/80 text-rose-700 text-xs font-semibold transition-colors flex items-center justify-center gap-1.5 shadow-2xs cursor-pointer"
+                >
+                  <Trash2 className="w-3.5 h-3.5 text-rose-500" />
+                  <span>Delete Form</span>
+                </button>
+              )}
+            </div>
           </div>
         </div>
       )}
