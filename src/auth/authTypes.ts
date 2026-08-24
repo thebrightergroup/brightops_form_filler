@@ -25,6 +25,7 @@ export const ALLOWED_DOMAINS = [
 
 export const ALLOWED_EMAIL_EXCEPTIONS = [
   'gary.j.mccourt@gmail.com',
+  'skennewell91@gmail.com',
 ];
 
 /**
