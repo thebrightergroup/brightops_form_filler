@@ -38,9 +38,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           });
           setError(null);
         } else {
-          void signOut(auth);
+          // If signed in with an unauthorized email, immediately sign out and present clear domain restriction message
+          signOut(auth);
           setUser(null);
-          setError(authCheck.reason || 'Access restricted to authorised BrightOps domains.');
+          setError(authCheck.reason || 'Access restricted to authorized BrightOps domains.');
         }
       } else {
         setUser(null);
@@ -56,19 +57,21 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setLoading(true);
     try {
       const result = await signInWithPopup(auth, googleProvider);
-      const authCheck = checkEmailAuthorization(result.user.email);
+      const email = result.user.email;
+      const authCheck = checkEmailAuthorization(email);
 
       if (!authCheck.isAuthorized) {
         await signOut(auth);
         setUser(null);
-        setError(authCheck.reason || 'Access restricted to authorised BrightOps domains.');
+        setError(authCheck.reason || 'Access restricted to authorized BrightOps domains.');
       }
     } catch (err: any) {
       console.error('Google Sign-In error:', err);
+      // Suppress popup closed by user noise or show clean message
       if (err.code === 'auth/popup-closed-by-user') {
         setError('Sign-in cancelled.');
       } else {
-        setError('Unable to sign in with Google. Please try again.');
+        setError(err.message || 'Failed to authenticate with Google.');
       }
     } finally {
       setLoading(false);
@@ -81,9 +84,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       await signOut(auth);
       setUser(null);
       setError(null);
-    } catch (err) {
+    } catch (err: any) {
       console.error('Sign-out error:', err);
-      setError('Unable to sign out right now. Please try again.');
+      setError('Failed to sign out.');
     } finally {
       setLoading(false);
     }
@@ -93,7 +96,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   return (
     <AuthContext.Provider
-      value={{ user, loading, error, signInWithGoogle, signOutUser, clearError }}
+      value={{
+        user,
+        loading,
+        error,
+        signInWithGoogle,
+        signOutUser,
+        clearError,
+      }}
     >
       {children}
     </AuthContext.Provider>

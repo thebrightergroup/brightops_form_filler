@@ -26,6 +26,7 @@ export interface DetectedField {
   id: string;
   label: string;
   machineName: string;
+  originalPdfFieldName?: string; // Exact un-normalized AcroForm field name from source PDF
   fieldType: FieldType;
   pageNumber: number; // 1-indexed
   x: number; // percentage (0 - 100)
@@ -43,6 +44,28 @@ export interface DetectedField {
   dataSource?: DataSource;
   accepted?: boolean; // For AI review status
   requiresReview?: boolean; // Flag for fields requiring review (0.65 - 0.84 confidence)
+}
+
+export interface PdfExportFieldFailure {
+  fieldId: string;
+  label: string;
+  originalPdfFieldName?: string;
+  machineName: string;
+  fieldType: FieldType;
+  reason: string;
+}
+
+export interface PdfExportResult {
+  pdfBytes: Uint8Array;
+  pageCount: number;
+  fieldsAttempted: number;
+  fieldsSuccessfullyWritten: number;
+  fieldsSkipped: number;
+  fieldsUnsupported: number;
+  fieldsFailed: number;
+  failures: PdfExportFieldFailure[];
+  warnings: string[];
+  reopenVerified: boolean;
 }
 
 export interface DocumentAnalysis {

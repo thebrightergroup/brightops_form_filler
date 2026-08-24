@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useAuth } from './AuthContext';
-import { LogOut, Shield, ChevronDown, Zap } from 'lucide-react';
+import { LogOut, User, Shield, ChevronDown, Zap, Settings2 } from 'lucide-react';
 
 interface UserMenuProps {
   onOpenPrefillSettings?: () => void;
@@ -31,7 +31,12 @@ export const UserMenu: React.FC<UserMenuProps> = ({ onOpenPrefillSettings }) => 
         title={`Signed in as ${user.email}`}
       >
         {user.photoURL ? (
-          <img src={user.photoURL} alt={user.displayName || 'User'} className="w-6 h-6 rounded-full object-cover border border-sky-400" referrerPolicy="no-referrer" />
+          <img
+            src={user.photoURL}
+            alt={user.displayName || 'User'}
+            className="w-6 h-6 rounded-full object-cover border border-sky-400"
+            referrerPolicy="no-referrer"
+          />
         ) : (
           <div className="w-6 h-6 rounded-full bg-[#006CA3] text-white flex items-center justify-center text-xs font-semibold">
             {user.displayName?.charAt(0).toUpperCase() || 'U'}
@@ -45,21 +50,26 @@ export const UserMenu: React.FC<UserMenuProps> = ({ onOpenPrefillSettings }) => 
 
       {isOpen && (
         <div className="absolute right-0 mt-2 w-64 bg-[#0F172A] border border-slate-800 rounded-xl shadow-xl z-50 py-2 text-xs">
+          {/* User Details */}
           <div className="px-4 py-2 border-b border-slate-800">
             <p className="font-semibold text-slate-100 truncate">{user.displayName}</p>
             <p className="text-slate-400 font-mono text-[11px] truncate">{user.email}</p>
             <div className="mt-1.5 flex items-center gap-1.5">
               <span className="px-2 py-0.5 rounded bg-sky-950 text-sky-400 font-medium text-[10px] border border-sky-800/50 flex items-center gap-1">
                 <Shield className="w-3 h-3" />
-                {user.domain ? `@${user.domain}` : 'Authorised Member'}
+                {user.domain ? `@${user.domain}` : 'Authorized Member'}
               </span>
             </div>
           </div>
 
+          {/* Prefill Profile Settings */}
           {onOpenPrefillSettings && (
             <div className="px-2 py-1 border-b border-slate-800/80">
               <button
-                onClick={() => { setIsOpen(false); onOpenPrefillSettings(); }}
+                onClick={() => {
+                  setIsOpen(false);
+                  onOpenPrefillSettings();
+                }}
                 className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sky-300 hover:bg-sky-500/10 hover:text-sky-200 transition-colors cursor-pointer"
               >
                 <Zap className="w-4 h-4 text-sky-400" />
@@ -68,9 +78,13 @@ export const UserMenu: React.FC<UserMenuProps> = ({ onOpenPrefillSettings }) => 
             </div>
           )}
 
+          {/* Sign Out Button */}
           <div className="px-2 pt-1">
             <button
-              onClick={() => { setIsOpen(false); void signOutUser(); }}
+              onClick={() => {
+                setIsOpen(false);
+                signOutUser();
+              }}
               className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-rose-300 hover:bg-rose-500/10 hover:text-rose-200 transition-colors cursor-pointer"
             >
               <LogOut className="w-4 h-4 text-rose-400" />
@@ -82,3 +96,4 @@ export const UserMenu: React.FC<UserMenuProps> = ({ onOpenPrefillSettings }) => 
     </div>
   );
 };
+

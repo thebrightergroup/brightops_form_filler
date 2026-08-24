@@ -30,9 +30,6 @@ export const ALLOWED_EMAIL_EXCEPTIONS = [
 /**
  * Validates whether an email belongs to an allowed corporate domain
  * or matches an approved testing/admin exception.
- *
- * IMPORTANT: this is a prototype UI gate only. Protected shared/cloud
- * data must also be authorised server-side and/or through Firebase rules.
  */
 export function checkEmailAuthorization(email: string | null | undefined): {
   isAuthorized: boolean;
@@ -47,10 +44,12 @@ export function checkEmailAuthorization(email: string | null | undefined): {
 
   const normalizedEmail = email.trim().toLowerCase();
 
+  // 1. Check explicit email exceptions (e.g. testing accounts)
   if (ALLOWED_EMAIL_EXCEPTIONS.map((e) => e.toLowerCase()).includes(normalizedEmail)) {
     return { isAuthorized: true };
   }
 
+  // 2. Check corporate domains
   const domain = normalizedEmail.split('@')[1];
   if (domain && ALLOWED_DOMAINS.map((d) => d.toLowerCase()).includes(domain)) {
     return { isAuthorized: true };
@@ -58,6 +57,6 @@ export function checkEmailAuthorization(email: string | null | undefined): {
 
   return {
     isAuthorized: false,
-    reason: `Access restricted. Your email (${normalizedEmail}) is not from an authorised BrightOps domain (@thebrightergroup.com.au or @brightops.com.au).`,
+    reason: `Access restricted. Your email (${normalizedEmail}) is not from an authorized BrightOps domain (@thebrightergroup.com.au or @brightops.com.au).`,
   };
 }
