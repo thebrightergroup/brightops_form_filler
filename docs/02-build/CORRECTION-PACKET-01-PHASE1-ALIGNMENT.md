@@ -19,7 +19,7 @@ The latest AI Studio checkpoint adds Firebase/Google authentication and browser-
 
 The current PDF export implementation also transforms native PDF field names into BrightOps-style machine names and then attempts to use those transformed names to address native AcroForm controls. That can break editable-PDF output.
 
-The AI Studio export also contains Firebase configuration pointing to project `brightsites-mini`. That is not accepted as canonical Form Filler configuration without explicit confirmation.
+The AI Studio export also contains Firebase configuration pointing to project `iyb-sites-mini`. That is not accepted as canonical Form Filler configuration without explicit confirmation.
 
 ## Required corrections
 

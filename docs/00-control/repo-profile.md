@@ -66,5 +66,5 @@ Cross-project standards and approved company knowledge belong in `thebrightergro
 - Google/Firebase authentication is currently a prototype boundary. Client-side allow-listing is not sufficient for protected server/cloud data access; server/Firebase-side authorisation is required before shared production data is introduced.
 - Reusable signature images or dedicated signature values must not be stored in browser profile storage.
 - Native AcroForm field names must be preserved separately from BrightOps machine names for reliable editable-PDF export.
-- The AI Studio export referenced Firebase project `brightsites-mini`; this configuration is not accepted as canonical Form Filler configuration. The repo uses environment-based Firebase values pending confirmation of the correct project.
+- The AI Studio export referenced Firebase project `iyb-sites-mini`; this configuration is not accepted as canonical Form Filler configuration. The repo uses environment-based Firebase values pending confirmation of the correct project.
 - Google Cloud build logs are not currently evidenced in this repository through GitHub Actions. Build-log integration remains to be verified/configured.

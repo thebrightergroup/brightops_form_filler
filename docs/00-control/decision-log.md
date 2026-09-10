@@ -15,7 +15,7 @@
 | 2026-08-21 | Browser profile prefill may store ordinary user profile data, but must not store reusable signature images or a dedicated reusable signature value. | Gary McCourt | Approved | Correction Packet 01 |
 | 2026-08-21 | Heuristic profile prefill is a Phase 1 convenience layer, not the canonical future BrightOps data-mapping model. | Gary McCourt | Approved | Correction Packet 01 |
 | 2026-08-21 | Client-side email/domain filtering is not a production authorisation boundary. Server/Firebase-side enforcement is required before protected shared data is introduced. | Gary McCourt | Approved | Correction Packet 01 |
-| 2026-08-21 | Do not adopt the AI Studio-exported `brightsites-mini` Firebase configuration as Form Filler canonical configuration; use environment-driven configuration pending confirmation of the approved Firebase project. | Gary McCourt | Approved | Correction Packet 01 |
+| 2026-08-21 | Do not adopt the AI Studio-exported `iyb-sites-mini` Firebase configuration as Form Filler canonical configuration; use environment-driven configuration pending confirmation of the approved Firebase project. | Gary McCourt | Approved | Correction Packet 01 |
 
 ## Notes
 
