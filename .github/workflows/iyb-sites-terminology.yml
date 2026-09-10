@@ -1,0 +1,14 @@
+name: IYB Sites terminology guard
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  terminology:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check approved terminology
+        run: bash scripts/check-iyb-sites-terminology.sh
